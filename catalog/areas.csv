@@ -1,0 +1,8 @@
+key,name,members,terms
+nord_ovest,Nord-Ovest,piemonte|valle_d_aosta|liguria|lombardia,nord ovest|nordovest|north west|northwest|nord ouest
+nord_est,Nord-Est,trentino_alto_adige|veneto|friuli_venezia_giulia|emilia_romagna,nord est|nordest|north east|northeast
+centro,Centro,toscana|umbria|marche|lazio,centro italia|italia centrale|central italy|centre italie|centro
+sud,Sud,abruzzo|molise|campania|puglia|basilicata|calabria,sud italia|italia meridionale|southern italy|south italy|sud
+isole,Isole,sicilia|sardegna,isole|islands|insular|iles
+nord,Nord,piemonte|valle_d_aosta|liguria|lombardia|trentino_alto_adige|veneto|friuli_venezia_giulia|emilia_romagna,nord italia|italia settentrionale|northern italy|north italy|nord
+mezzogiorno,Mezzogiorno,abruzzo|molise|campania|puglia|basilicata|calabria|sicilia|sardegna,mezzogiorno|south and islands

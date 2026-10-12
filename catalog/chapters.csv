@@ -1,0 +1,12 @@
+key,name,icd10,terms
+infectious,Certain infectious and parasitic diseases,A00-B99,infectious|infection|infettiv|infezion|infectieu
+neoplasms,Neoplasms,C00-D48,neoplasm|neoplasi|cancer|cancro|tumour|tumor|oncolog|malignan
+blood_immune,Diseases of the blood and immune mechanism,D50-D89,haematolog|hematolog|ematolog|hematolog|immune|immunitar
+endocrine,"Endocrine, nutritional and metabolic diseases",E00-E90,endocrin|metabolic|metaboli|nutritional|nutrizional
+mental,Mental and behavioural disorders,F00-F99,mental|psychiatr|psichiatr|behavio|comportament
+nervous,Diseases of the nervous system,G00-G99,nervous|neurolog|nervos|nerveu
+circulatory,Diseases of the circulatory system,I00-I99,circulator|circolator|circulatoir|cardiovascul|cardiovascol
+respiratory,Diseases of the respiratory system,J00-J99,respirator|respiratoir|pulmonar|polmonar|pulmonair
+digestive,Diseases of the digestive system,K00-K93,digestiv|digerent|gastrointestin|gastroenterolog
+musculoskeletal,Diseases of the musculoskeletal system and connective tissue,M00-M99,musculoskelet|muscoloschelet|rheumat|reumat|rhumat|connective
+genitourinary,Diseases of the genitourinary system,N00-N99,genitourin|urolog|nephrolog|nefrolog|renal|kidney

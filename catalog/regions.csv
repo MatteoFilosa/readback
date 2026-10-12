@@ -1,0 +1,21 @@
+key,name,name_en,area,population_m,terms
+piemonte,Piemonte,Piedmont,nord_ovest,4.25,piemont|piedmont
+valle_d_aosta,Valle d'Aosta,Aosta Valley,nord_ovest,0.12,aosta|valdostan
+liguria,Liguria,Liguria,nord_ovest,1.51,liguri
+lombardia,Lombardia,Lombardy,nord_ovest,10.0,lombard
+trentino_alto_adige,Trentino-Alto Adige,Trentino-South Tyrol,nord_est,1.08,trentin|adige|tyrol|sudtirol
+veneto,Veneto,Veneto,nord_est,4.85,veneto|veneti|veneta|venete
+friuli_venezia_giulia,Friuli-Venezia Giulia,Friuli-Venezia Giulia,nord_est,1.19,friuli|friulan|giulia
+emilia_romagna,Emilia-Romagna,Emilia-Romagna,nord_est,4.45,emilia|romagn
+toscana,Toscana,Tuscany,centro,3.66,toscan|tuscan
+umbria,Umbria,Umbria,centro,0.86,umbri
+marche,Marche,Marche,centro,1.49,marche|marchigian
+lazio,Lazio,Lazio,centro,5.72,lazio|lazial
+abruzzo,Abruzzo,Abruzzo,sud,1.27,abruzz
+molise,Molise,Molise,sud,0.29,molis
+campania,Campania,Campania,sud,5.59,campania|campan
+puglia,Puglia,Apulia,sud,3.89,pugli|apulia
+basilicata,Basilicata,Basilicata,sud,0.53,basilicat|lucan
+calabria,Calabria,Calabria,sud,1.84,calabr
+sicilia,Sicilia,Sicily,isole,4.79,sicil
+sardegna,Sardegna,Sardinia,isole,1.57,sardegn|sardinia|sardi|sarda|sarde

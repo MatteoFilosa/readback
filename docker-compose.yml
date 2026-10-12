@@ -1,0 +1,17 @@
+services:
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      LLM_BASE_URL: ${LLM_BASE_URL:-http://host.docker.internal:8000/v1}
+      LLM_MODEL: ${LLM_MODEL:-}
+      LLM_API_KEY: ${LLM_API_KEY:-EMPTY}
+      LLM_JSON: ${LLM_JSON:-1}
+      LLM_HARDWARE: ${LLM_HARDWARE:-}
+      COHORT_ROWS: ${COHORT_ROWS:-200000}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./data:/app/data
+      - ./results:/app/results

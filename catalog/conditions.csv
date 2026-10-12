@@ -1,0 +1,54 @@
+key,name,icd10,chapter,aliases
+hiv,HIV disease,B20-B24,infectious,aids|sida|hiv infection|infezione da hiv
+chronic_hepatitis_b,Chronic hepatitis B,B18.0-B18.1,infectious,hepatitis b|epatite b|hépatite b|hbv
+chronic_hepatitis_c,Chronic hepatitis C,B18.2,infectious,hepatitis c|epatite c|hépatite c|hcv
+tuberculosis,Tuberculosis,A15-A19,infectious,tb|tubercolosi|tuberculose
+breast_cancer,Breast cancer,C50,neoplasms,tumore al seno|tumore della mammella|carcinoma mammario|cancer du sein
+lung_cancer,Lung cancer,C34,neoplasms,tumore del polmone|tumore polmonare|carcinoma polmonare|cancer du poumon
+colorectal_cancer,Colorectal cancer,C18-C20,neoplasms,colon cancer|tumore del colon|tumore colorettale|cancer colorectal
+prostate_cancer,Prostate cancer,C61,neoplasms,tumore della prostata|cancer de la prostate
+melanoma,Melanoma,C43,neoplasms,melanoma maligno|mélanome
+leukaemia,Leukaemia,C91-C95,neoplasms,leukemia|leucemia|leucémie
+lymphoma,Lymphoma,C81-C86,neoplasms,linfoma|lymphome
+iron_deficiency_anaemia,Iron deficiency anaemia,D50,blood_immune,iron deficiency anemia|anaemia|anemia|anemia sideropenica|anémie
+sickle_cell_disease,Sickle cell disease,D57,blood_immune,drepanocitosi|anemia falciforme|drépanocytose
+immunodeficiency,Primary immunodeficiency,D80-D84,blood_immune,immunodeficienza|déficit immunitaire
+diabetes,Diabetes mellitus,E10-E14,endocrine,diabete|diabète|diabetic|diabetico|diabetici|diabétique|dm
+obesity,Obesity,E66,endocrine,obese|obesità|obésité
+hypothyroidism,Hypothyroidism,E03,endocrine,ipotiroidismo|hypothyroïdie
+hyperlipidaemia,Hyperlipidaemia,E78,endocrine,hyperlipidemia|high cholesterol|ipercolesterolemia|dislipidemia|hypercholestérolémie
+dementia,Dementia,F00-F03,mental,demenza|démence
+schizophrenia,Schizophrenia,F20,mental,schizofrenia|schizophrénie
+bipolar_disorder,Bipolar disorder,F31,mental,disturbo bipolare|trouble bipolaire
+depression,Depressive disorder,F32-F33,mental,depressione|dépression|major depression
+anxiety_disorder,Anxiety disorder,F40-F41,mental,anxiety|ansia|disturbo d'ansia|anxiété
+alcohol_use_disorder,Alcohol use disorder,F10,mental,alcoholism|alcolismo|alcoolisme|alcohol abuse
+alzheimers_disease,Alzheimer's disease,G30,nervous,alzheimer|malattia di alzheimer|maladie d'alzheimer
+parkinsons_disease,Parkinson's disease,G20,nervous,parkinson|morbo di parkinson|maladie de parkinson
+epilepsy,Epilepsy,G40,nervous,epilessia|épilepsie
+multiple_sclerosis,Multiple sclerosis,G35,nervous,sclerosi multipla|sclérose en plaques
+migraine,Migraine,G43,nervous,emicrania
+hypertension,Hypertension,I10-I15,circulatory,high blood pressure|ipertensione|hypertension artérielle
+ischaemic_heart_disease,Ischaemic heart disease,I20-I25,circulatory,ischemic heart disease|coronary artery disease|cardiopatia ischemica|myocardial infarction|infarto|cardiopathie ischémique
+heart_failure,Heart failure,I50,circulatory,congestive heart failure|chf|scompenso cardiaco|insufficienza cardiaca|insuffisance cardiaque
+atrial_fibrillation,Atrial fibrillation,I48,circulatory,afib|fibrillazione atriale|fibrillation auriculaire
+cerebrovascular_disease,Cerebrovascular disease,I60-I69,circulatory,stroke|ictus|avc|ischemic stroke|accident vasculaire cérébral
+peripheral_artery_disease,Peripheral artery disease,I70-I73,circulatory,arteriopatia periferica|artériopathie périphérique
+venous_thromboembolism,Venous thromboembolism,I26 I80-I82,circulatory,vte|dvt|pulmonary embolism|deep vein thrombosis|trombosi venosa|embolia polmonare|thrombose veineuse
+asthma,Asthma,J45,respiratory,asma|asmatico|asmatici|asthmatic|asthme
+copd,Chronic obstructive pulmonary disease,J44,respiratory,bpco|broncopneumopatia cronica ostruttiva
+bronchiectasis,Bronchiectasis,J47,respiratory,bronchiectasie|dilatation des bronches
+interstitial_lung_disease,Interstitial lung disease,J84,respiratory,pulmonary fibrosis|fibrosi polmonare|fibrose pulmonaire|ild
+liver_cirrhosis,Liver cirrhosis,K70.3 K74,digestive,cirrhosis|cirrosi|cirrhose
+crohns_disease,Crohn's disease,K50,digestive,crohn|morbo di crohn|maladie de crohn
+ulcerative_colitis,Ulcerative colitis,K51,digestive,colite ulcerosa|rectocolite hémorragique
+gerd,Gastro-oesophageal reflux disease,K21,digestive,gastroesophageal reflux|reflusso gastroesofageo|reflux gastro-œsophagien
+coeliac_disease,Coeliac disease,K90.0,digestive,celiac disease|celiachia|maladie cœliaque
+rheumatoid_arthritis,Rheumatoid arthritis,M05-M06,musculoskeletal,artrite reumatoide|polyarthrite rhumatoïde
+osteoarthritis,Osteoarthritis,M15-M19,musculoskeletal,artrosi|arthrose
+osteoporosis,Osteoporosis,M80-M81,musculoskeletal,osteoporosi|ostéoporose
+gout,Gout,M10,musculoskeletal,gotta|goutte
+systemic_lupus,Systemic lupus erythematosus,M32,musculoskeletal,lupus|lupus eritematoso sistemico
+chronic_kidney_disease,Chronic kidney disease,N18,genitourinary,ckd|insufficienza renale cronica|malattia renale cronica|insuffisance rénale chronique
+benign_prostatic_hyperplasia,Benign prostatic hyperplasia,N40,genitourinary,bph|ipertrofia prostatica|hypertrophie bénigne de la prostate
+endometriosis,Endometriosis,N80,genitourinary,endometriosi|endométriose

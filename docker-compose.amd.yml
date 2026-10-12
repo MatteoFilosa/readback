@@ -1,0 +1,35 @@
+# Model server on an AMD Instinct GPU, next to the app.
+#   docker compose -f docker-compose.yml -f docker-compose.amd.yml up -d
+services:
+  vllm:
+    image: ${VLLM_IMAGE:-rocm/vllm:latest}
+    command: >
+      vllm serve ${LLM_MODEL:-Qwen/Qwen2.5-72B-Instruct}
+      --host 0.0.0.0 --port 8000
+      --max-model-len 8192
+      --api-key ${LLM_API_KEY:-change-me}
+    devices:
+      - /dev/kfd
+      - /dev/dri
+    group_add:
+      - video
+    ipc: host
+    shm_size: 16g
+    security_opt:
+      - seccomp=unconfined
+    environment:
+      HF_TOKEN: ${HF_TOKEN:-}
+    volumes:
+      - ${HOME}/.cache/huggingface:/root/.cache/huggingface
+    ports:
+      - "127.0.0.1:8000:8000"
+
+  app:
+    environment:
+      LLM_BASE_URL: http://vllm:8000/v1
+      LLM_MODEL: ${LLM_MODEL:-Qwen/Qwen2.5-72B-Instruct}
+      LLM_API_KEY: ${LLM_API_KEY:-change-me}
+      LLM_JSON: "1"
+      LLM_HARDWARE: ${LLM_HARDWARE:-AMD Instinct MI300X}
+    depends_on:
+      - vllm

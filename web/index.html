@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cohort Scout</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="logo" aria-hidden="true"></span>
+      <div>
+        <h1>Cohort Scout</h1>
+        <p>Find patients by describing them. Every clause is checked before anything runs.</p>
+      </div>
+    </div>
+    <div class="status" id="status"><span class="dot"></span><span>connecting</span></div>
+  </header>
+
+  <main>
+    <section class="col">
+      <div class="card">
+        <label class="label" for="request">Request</label>
+        <textarea id="request" rows="3" placeholder="Describe the patients you are looking for, in any language"></textarea>
+        <div class="examples" id="examples"></div>
+        <div class="actions">
+          <button class="primary" id="draft">Draft filter</button>
+          <button id="empty">Write it by hand</button>
+          <span class="hint" id="draft-info"></span>
+        </div>
+      </div>
+
+      <div class="card" id="filter-card" hidden>
+        <div class="card-head">
+          <h2>Filter</h2>
+          <span class="hint">All clauses must hold. Edit anything, the checks rerun.</span>
+        </div>
+        <div id="note" class="note" hidden></div>
+        <div id="general-issues"></div>
+        <div id="clauses"></div>
+        <button class="ghost" id="add">+ Add clause</button>
+
+        <div class="explain" id="explain-box" hidden>
+          <h3>How the request was read</h3>
+          <ul id="explain"></ul>
+        </div>
+
+        <details class="sql" id="sql-box" hidden>
+          <summary>SQL</summary>
+          <pre id="sql"></pre>
+        </details>
+
+        <div class="run-row">
+          <button class="primary big" id="run" disabled>Run</button>
+          <span class="hint" id="run-hint"></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="col">
+      <div class="card" id="result-card" hidden>
+        <div class="count-row">
+          <div>
+            <div class="count" id="count"></div>
+            <div class="hint" id="count-sub"></div>
+          </div>
+          <span class="badge" id="edited" hidden>edited before running</span>
+        </div>
+        <div class="grid2">
+          <div><h3>Age</h3><div class="bars" id="ages"></div></div>
+          <div><h3>Sex</h3><div class="bars" id="sex"></div></div>
+          <div><h3>Most frequent conditions</h3><div class="bars" id="conditions"></div></div>
+          <div><h3>Regions</h3><div class="bars" id="regions"></div></div>
+        </div>
+        <h3>First admissions in the cohort</h3>
+        <div class="table-wrap"><table id="sample"></table></div>
+      </div>
+
+      <div class="card empty-state" id="placeholder">
+        <h2>How it works</h2>
+        <ol>
+          <li>Write what you need, for example <em>women over 65 with diabetes and hypertension</em>.</li>
+          <li>An open model running on the hospital's own GPU drafts a filter.</li>
+          <li>Deterministic checks mark what does not add up: values that do not exist, parts of the request the filter dropped or added, near-complete groups, numbers nobody wrote, "and" read as "or".</li>
+          <li>You fix or accept each clause. Nothing runs until you press <strong>Run</strong>.</li>
+        </ol>
+        <p class="hint">All patients here are synthetic.</p>
+      </div>
+
+      <div class="foot hint" id="stats"></div>
+    </section>
+  </main>
+
+  <datalist id="dl-condition"></datalist>
+  <datalist id="dl-region"></datalist>
+  <datalist id="dl-sex"></datalist>
+  <datalist id="dl-smoking"></datalist>
+  <script src="/static/app.js"></script>
+</body>
+</html>

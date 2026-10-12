@@ -1,0 +1,100 @@
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
+
+import pytest
+
+from cohort import llm
+
+REPLY = ('Sure.\n```json\n{"filter": [{"attr": "condition", "op": "has", "value": "diabete"}, '
+         '{"attr": "age", "op": ">", "value": "65"}], "note": "a {brace} in a string"}\n```')
+
+
+class FakeModel(BaseHTTPRequestHandler):
+    def _send(self, payload):
+        body = json.dumps(payload).encode()
+        self.send_response(200)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def do_GET(self):
+        self._send({"data": [{"id": "fake-model"}]})
+
+    def do_POST(self):
+        self.rfile.read(int(self.headers["Content-Length"]))
+        self._send({"choices": [{"message": {"content": REPLY}}],
+                    "usage": {"prompt_tokens": 900, "completion_tokens": 40}})
+
+    def log_message(self, *args):
+        pass
+
+
+@pytest.fixture
+def fake_model(monkeypatch):
+    server = HTTPServer(("127.0.0.1", 0), FakeModel)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    monkeypatch.setenv("LLM_BASE_URL", f"http://127.0.0.1:{server.server_port}/v1")
+    monkeypatch.delenv("LLM_MODEL", raising=False)
+    yield
+    server.shutdown()
+
+
+def test_first_object_skips_prose_and_fences():
+    assert llm._first_object(REPLY)["note"] == "a {brace} in a string"
+    with pytest.raises(ValueError):
+        llm._first_object("no json here")
+
+
+def test_draft_against_a_fake_endpoint(fake_model, cat):
+    out = llm.draft("diabetici over 65", cat)
+    assert out["error"] is None
+    assert out["model"] == "fake-model"
+    assert out["tokens"] == [900, 40]
+    assert len(out["filter"]) == 2
+
+
+def test_draft_never_raises_when_the_endpoint_is_down(monkeypatch, cat):
+    monkeypatch.setenv("LLM_BASE_URL", "http://127.0.0.1:9/v1")
+    monkeypatch.setenv("LLM_MODEL", "x")
+    monkeypatch.setenv("LLM_TIMEOUT", "2")
+    out = llm.draft("anything", cat)
+    assert out["filter"] == [] and "unreachable" in out["error"]
+
+
+def test_prompt_lists_every_key(cat):
+    from datetime import date
+    prompt = llm.system_prompt(cat, date(2026, 10, 12))
+    for key in list(cat.conditions) + list(cat.attrs) + list(cat.chapters) + list(cat.areas):
+        assert key in prompt
+
+
+@pytest.fixture
+def client(small_db, tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    from cohort import api
+    monkeypatch.setattr(api, "DB_PATH", small_db)
+    monkeypatch.setattr(api, "LOG_PATH", str(tmp_path / "events.jsonl"))
+    with TestClient(api.app) as c:
+        yield c
+
+
+def test_api_round_trip(client, fake_model):
+    assert len(client.get("/api/catalog").json()["conditions"]) > 50
+    d = client.post("/api/draft", json={"request": "diabetici over 65"}).json()
+    assert d["filter"] == [{"attr": "condition", "op": "has", "value": "diabetes"},
+                           {"attr": "age", "op": "gt", "value": 65}]
+    assert d["runnable"]
+    edited = d["filter"] + [{"attr": "sex", "op": "eq", "value": "female"}]
+    r = client.post("/api/run", json={"request": "diabetici over 65", "filter": edited,
+                                      "drafted": d["filter"], "draft_id": d["id"]}).json()
+    assert r["edited"] is True
+    assert r["result"]["count"] <= 3000
+    s = client.get("/api/stats").json()
+    assert s["drafts"] == 1 and s["runs"] == 1 and s["runs_edited"] == 1
+
+
+def test_api_refuses_to_run_a_blocked_filter(client):
+    r = client.post("/api/run", json={"request": "long covid", "filter": []})
+    assert r.status_code == 422
