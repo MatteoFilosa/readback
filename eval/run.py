@@ -11,7 +11,10 @@ import json
 import math
 import os
 import sys
+import time
 from datetime import date, timedelta
+
+from dotenv import load_dotenv
 
 from cohort import llm
 from cohort.catalog import get_catalog
@@ -104,13 +107,17 @@ def wilson(k, n, z=1.96):
     return max(0.0, mid - half), min(1.0, mid + half)
 
 
-def draft_run(out_path, langs):
+def draft_run(out_path, langs, rpm):
     cat = get_catalog()
     os.makedirs(os.path.dirname(os.path.abspath(out_path)), exist_ok=True)
+    os.environ.setdefault("LLM_MAX_WAIT", "90")
     model = llm.served_model()
+    gap, last = 60 / rpm if rpm else 0, 0.0
     with open(out_path, "a", encoding="utf-8") as f:
         for item in GOLD:
             for lang in langs:
+                time.sleep(max(0.0, last + gap - time.monotonic()))
+                last = time.monotonic()
                 out = llm.draft(item[lang], cat, TODAY)
                 f.write(json.dumps({"model": out["model"] or model, "lang": lang, "id": item["id"],
                                     "request": item[lang], "pred": out["filter"],
@@ -166,11 +173,22 @@ def main(argv=None):
     d = sub.add_parser("draft")
     d.add_argument("--out", required=True)
     d.add_argument("--langs", default=",".join(LANGS))
+    d.add_argument("--env-file", help="KEY=VALUE file, e.g. .env.local")
+    d.add_argument("--model", help="overrides LLM_MODEL")
+    d.add_argument("--reasoning", help="overrides LLM_REASONING (reasoning_effort)")
+    # Shared endpoints throttle per key; 0 disables pacing for a private vLLM.
+    d.add_argument("--rpm", type=float, default=15)
     s = sub.add_parser("score")
     s.add_argument("path")
     args = ap.parse_args(argv)
     if args.cmd == "draft":
-        draft_run(args.out, [x.strip() for x in args.langs.split(",") if x.strip()])
+        if args.env_file:
+            load_dotenv(args.env_file, override=True)
+        if args.model:
+            os.environ["LLM_MODEL"] = args.model
+        if args.reasoning is not None:
+            os.environ["LLM_REASONING"] = args.reasoning
+        draft_run(args.out, [x.strip() for x in args.langs.split(",") if x.strip()], args.rpm)
     else:
         score_run(args.path)
 

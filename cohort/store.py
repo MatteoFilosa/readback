@@ -23,6 +23,17 @@ class Store:
     def _one(self, sql, params=()):
         return self.con.execute(sql, params).fetchone()[0]
 
+    def funnel(self, parts: list) -> list[int]:
+        """[(where, params)] per clause -> patients left after each one, in filter order."""
+        cur = self._cursor()
+        counts, where, params = [], [], []
+        for w, p in parts:
+            where.append(w)
+            params += p
+            counts.append(cur.execute(f"SELECT count(*) FROM patients WHERE {' AND '.join(where)}",
+                                      params).fetchone()[0])
+        return counts
+
     def run(self, where: str, params: list, sample: int = 12) -> dict:
         cur = self._cursor()
         cohort = f"SELECT * FROM patients WHERE {where}"

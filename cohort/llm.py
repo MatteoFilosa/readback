@@ -1,6 +1,7 @@
 """Client for any OpenAI-compatible chat endpoint (vLLM, LM Studio, Ollama, llama.cpp)."""
 import json
 import os
+import random
 import time
 import urllib.error
 import urllib.request
@@ -14,9 +15,14 @@ def settings() -> dict:
         "base_url": os.environ.get("LLM_BASE_URL", "http://localhost:8000/v1").rstrip("/"),
         "model": os.environ.get("LLM_MODEL", ""),
         "api_key": os.environ.get("LLM_API_KEY", "EMPTY"),
-        "timeout": float(os.environ.get("LLM_TIMEOUT", "90")),
+        "timeout": float(os.environ.get("LLM_TIMEOUT", "45")),
         "json_mode": os.environ.get("LLM_JSON", "0") == "1",
         "hardware": os.environ.get("LLM_HARDWARE", ""),
+        # Reasoning tokens count toward max_tokens: too low a cap leaves the reply empty.
+        "max_tokens": int(os.environ.get("LLM_MAX_TOKENS", "2048")),
+        "reasoning": os.environ.get("LLM_REASONING", ""),
+        # Longest Retry-After worth waiting for on a 429; anything longer is reported.
+        "max_wait": float(os.environ.get("LLM_MAX_WAIT", "5")),
     }
 
 
@@ -110,11 +116,33 @@ def _first_object(text: str) -> dict:
     raise ValueError("no JSON object in the reply")
 
 
+class RateLimited(Exception):
+    def __init__(self, wait):
+        super().__init__(f"model endpoint rate limited, retry in {wait:g} s")
+        self.wait = wait
+
+
 def _post(url, body, cfg):
     req = urllib.request.Request(url, data=json.dumps(body).encode(), headers={
         "Content-Type": "application/json", "Authorization": f"Bearer {cfg['api_key']}"})
-    with urllib.request.urlopen(req, timeout=cfg["timeout"]) as r:
-        return json.load(r)
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(req, timeout=cfg["timeout"]) as r:
+                return json.load(r)
+        except TimeoutError:
+            # Shared endpoints sometimes stall one request for minutes; a fresh one is fast.
+            if attempt:
+                raise
+        except urllib.error.HTTPError as e:
+            if e.code != 429:
+                raise
+            try:
+                wait = float(e.headers.get("Retry-After") or 1)
+            except ValueError:
+                wait = 1.0
+            if wait > cfg["max_wait"] or attempt == 3:
+                raise RateLimited(wait) from e
+            time.sleep(wait * (1 + attempt) + random.random())
 
 
 def served_model(cfg=None) -> str:
@@ -140,19 +168,27 @@ def draft(request: str, cat: Catalog | None = None, today: date | None = None) -
         body = {
             "model": out["model"],
             "temperature": 0,
-            "max_tokens": 600,
+            "max_tokens": cfg["max_tokens"],
             "messages": [{"role": "system", "content": system_prompt(cat, today or date.today())},
                          {"role": "user", "content": request}],
         }
         if cfg["json_mode"]:
             body["response_format"] = {"type": "json_object"}
+        if cfg["reasoning"]:
+            body["reasoning_effort"] = cfg["reasoning"]
         reply = _post(f"{cfg['base_url']}/chat/completions", body, cfg)
-        out["raw"] = reply["choices"][0]["message"]["content"] or ""
+        choice = reply["choices"][0]
+        out["raw"] = choice["message"].get("content") or ""
         usage = reply.get("usage") or {}
         out["tokens"] = [usage.get("prompt_tokens"), usage.get("completion_tokens")]
+        if not out["raw"].strip() and choice.get("finish_reason") == "length":
+            raise ValueError("the reply ran out of tokens before the filter (raise LLM_MAX_TOKENS "
+                             "or lower LLM_REASONING)")
         parsed = _first_object(out["raw"])
         out["filter"] = parsed.get("filter", []) if isinstance(parsed, dict) else []
         out["note"] = str(parsed.get("note") or "") if isinstance(parsed, dict) else ""
+    except RateLimited as e:
+        out["error"] = str(e)
     except urllib.error.HTTPError as e:
         detail = e.read(500).decode("utf-8", "replace")
         out["error"] = f"model endpoint returned HTTP {e.code}: {detail}"

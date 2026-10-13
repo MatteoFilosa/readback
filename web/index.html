@@ -33,18 +33,18 @@
 
       <div class="card" id="filter-card" hidden>
         <div class="card-head">
-          <h2>Filter</h2>
-          <span class="hint">All clauses must hold. Edit anything, the checks rerun.</span>
+          <h2>Criteria</h2>
+          <span class="hint">All must hold. Whatever the request does not mention stays Any.</span>
         </div>
         <div id="note" class="note" hidden></div>
-        <div id="general-issues"></div>
-        <div id="clauses"></div>
-        <button class="ghost" id="add">+ Add clause</button>
-
         <div class="explain" id="explain-box" hidden>
           <h3>How the request was read</h3>
-          <ul id="explain"></ul>
+          <p class="echo" id="echo"></p>
+          <ul class="reading" id="reading"></ul>
+          <ul class="expansions" id="explain"></ul>
         </div>
+        <div id="general-issues"></div>
+        <div id="clauses"></div>
 
         <details class="sql" id="sql-box" hidden>
           <summary>SQL</summary>
@@ -67,6 +67,8 @@
           </div>
           <span class="badge" id="edited" hidden>edited before running</span>
         </div>
+        <h3>How each clause narrows the cohort</h3>
+        <div class="funnel" id="funnel"></div>
         <div class="grid2">
           <div><h3>Age</h3><div class="bars" id="ages"></div></div>
           <div><h3>Sex</h3><div class="bars" id="sex"></div></div>
@@ -81,9 +83,9 @@
         <h2>How it works</h2>
         <ol>
           <li>Write what you need, for example <em>women over 65 with diabetes and hypertension</em>.</li>
-          <li>An open model running on the hospital's own GPU drafts a filter.</li>
+          <li>An open model on AMD GPUs reads it and fills in the criteria.</li>
           <li>Deterministic checks mark what does not add up: values that do not exist, parts of the request the filter dropped or added, near-complete groups, numbers nobody wrote, "and" read as "or".</li>
-          <li>You fix or accept each clause. Nothing runs until you press <strong>Run</strong>.</li>
+          <li>You fix or accept each criterion. Nothing runs until you press <strong>Run</strong>.</li>
         </ol>
         <p class="hint">All patients here are synthetic.</p>
       </div>

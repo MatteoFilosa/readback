@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 from . import llm
 from .catalog import DATA_END, DATA_START, OPS, get_catalog
 from .checks import review
+from .filters import compile_where
 from .store import Store
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -108,6 +109,9 @@ def run(body: RunIn):
         raise HTTPException(422, detail={"message": "the filter has blocking issues",
                                          "issues": [i.as_dict() for i in report.issues]})
     result = state["store"].run(report.where, report.params)
+    cat = get_catalog()
+    result["steps"] = state["store"].funnel([compile_where([cl], cat)[1:]
+                                             for cl in report.resolved])
     edited = body.drafted is not None and \
         review(body.request, body.drafted).filter != report.filter
     _log({"type": "run", "draft_id": body.draft_id, "request": body.request,

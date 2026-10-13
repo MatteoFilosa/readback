@@ -1,6 +1,7 @@
 import json
 import threading
-from http.server import BaseHTTPRequestHandler, HTTPServer
+import time
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 
 import pytest
 
@@ -63,6 +64,69 @@ def test_draft_never_raises_when_the_endpoint_is_down(monkeypatch, cat):
     assert out["filter"] == [] and "unreachable" in out["error"]
 
 
+class Scripted(BaseHTTPRequestHandler):
+    def do_POST(self):
+        self.server.seen.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
+        status, headers, payload, *delay = self.server.script.pop(0)
+        time.sleep(delay[0] if delay else 0)
+        body = json.dumps(payload).encode()
+        try:
+            self.send_response(status)
+            for k, v in {"Content-Type": "application/json", **headers}.items():
+                self.send_header(k, v)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+        except OSError:
+            pass
+
+    def log_message(self, *args):
+        pass
+
+
+@pytest.fixture
+def scripted(monkeypatch):
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Scripted)
+    server.script, server.seen = [], []
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    monkeypatch.setenv("LLM_BASE_URL", f"http://127.0.0.1:{server.server_port}/v1")
+    monkeypatch.setenv("LLM_MODEL", "m")
+    monkeypatch.delenv("LLM_REASONING", raising=False)
+    yield server
+    server.shutdown()
+
+
+def test_short_rate_limits_are_retried(scripted, monkeypatch, cat):
+    ok = {"choices": [{"message": {"content": REPLY}}]}
+    scripted.script += [(429, {"Retry-After": "0"}, {"error": {}}), (200, {}, ok)]
+    monkeypatch.setenv("LLM_REASONING", "low")
+    out = llm.draft("diabetici over 65", cat)
+    assert out["error"] is None and len(scripted.seen) == 2
+    assert scripted.seen[0]["reasoning_effort"] == "low"
+
+
+def test_long_rate_limits_are_reported_not_waited(scripted, cat):
+    scripted.script.append((429, {"Retry-After": "60"}, {"error": {}}))
+    out = llm.draft("anything", cat)
+    assert "rate limited" in out["error"] and len(scripted.seen) == 1
+    assert "reasoning_effort" not in scripted.seen[0]
+
+
+def test_a_stalled_request_is_sent_once_more(scripted, monkeypatch, cat):
+    ok = {"choices": [{"message": {"content": REPLY}}]}
+    scripted.script += [(200, {}, ok, 1.5), (200, {}, ok)]
+    monkeypatch.setenv("LLM_TIMEOUT", "0.5")
+    out = llm.draft("diabetici over 65", cat)
+    assert out["error"] is None and len(scripted.seen) == 2
+
+
+def test_reasoning_that_eats_the_budget_is_named(scripted, cat):
+    scripted.script.append((200, {}, {"choices": [{"message": {"content": ""},
+                                                   "finish_reason": "length"}]}))
+    out = llm.draft("anything", cat)
+    assert "ran out of tokens" in out["error"]
+
+
 def test_prompt_lists_every_key(cat):
     from datetime import date
     prompt = llm.system_prompt(cat, date(2026, 10, 12))
@@ -91,6 +155,9 @@ def test_api_round_trip(client, fake_model):
                                       "drafted": d["filter"], "draft_id": d["id"]}).json()
     assert r["edited"] is True
     assert r["result"]["count"] <= 3000
+    steps = r["result"]["steps"]
+    assert len(steps) == 3 and steps == sorted(steps, reverse=True)
+    assert steps[-1] == r["result"]["count"]
     s = client.get("/api/stats").json()
     assert s["drafts"] == 1 and s["runs"] == 1 and s["runs_edited"] == 1
 

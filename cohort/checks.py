@@ -12,7 +12,7 @@ from functools import lru_cache
 from .catalog import TRIAGE_COLOURS, Catalog, get_catalog
 from .filters import compile_where, normalize, render, validate
 from .issues import ASSUMPTION, ERROR, WARNING, Issue
-from .resolve import resolve
+from .resolve import is_macro, macro_key, resolve
 from .text import fold, has_phrase, hits, stem, tokens
 
 # "*" marks a prefix, anything else matches a whole word.
@@ -233,6 +233,128 @@ def _cities(folded, cat: Catalog):
     return [info for name, info in cat.cities.items() if has_phrase(folded, name)]
 
 
+_WORD = re.compile(r"[^\W_]+")
+_KM = re.compile(r"\b\d+\s*km\b")
+_NUM = re.compile(r"\d+(?:[.,]\d+)?")
+
+
+def _spans(request):
+    """Folded tokens -> (folded text, [(token, offset in folded text, start, end in request)])."""
+    toks, pos = [], 0
+    for m in _WORD.finditer(request or ""):
+        for t in fold(m.group()).split():
+            toks.append((t, pos, m.start(), m.end()))
+            pos += len(t) + 1
+    return " ".join(t[0] for t in toks), toks
+
+
+def evidence(request: str, resolved: list, cat: Catalog) -> list[list[dict]]:
+    """For each clause, the words of the request it rests on. Empty means nothing in the
+    request supports it: the model chose it."""
+    v = vocab(cat)
+    folded, toks = _spans(request)
+    relative = {i for i, t in enumerate(toks)
+                for a, b in _relative_spans(folded) if a <= t[1] < b}
+
+    def within(spans):
+        spans = list(spans)
+        return {i for i, t in enumerate(toks) for a, b in spans if a <= t[1] < b}
+
+    def find(phrase, prefix=True):
+        rx = re.compile(rf"\b{re.escape(phrase)}" + ("" if prefix else r"\b"))
+        return within(m.span() for m in rx.finditer(folded)) if phrase else set()
+
+    def words(attr, strong=True):
+        return set().union(*(find(t.key, t.prefix) for t in v.terms
+                             if t.attrs == {attr} and t.strong == strong)) - relative
+
+    def numbers(values, tol):
+        nums = [x for x in values if isinstance(x, (int, float)) and not isinstance(x, bool)]
+        spans = [m.span() for m in _NUM.finditer(request or "")
+                 if any(abs(float(m.group().replace(",", ".")) - x) <= tol for x in nums)]
+        hit = {i for i, t in enumerate(toks) for a, b in spans if a <= t[2] < b}
+        for rx in (_AGE_CMP, _AGE_AFTER, _AGE_RANGE):
+            for m in rx.finditer(folded):
+                span = within([m.span()])
+                if span & hit:
+                    hit |= span
+        return hit
+
+    def named(key):
+        out = set()
+        for variant in v.condition_names.get(key, []):
+            parts = [find(k, p) for k, p in variant]
+            if all(parts):
+                out |= set().union(*parts)
+        return out
+
+    def region(key):
+        out = set().union(*(find(t) for t in v.region_terms.get(key, [])))
+        for name, info in cat.cities.items():
+            if info["region"] == key:
+                out |= find(name, False)
+        return out
+
+    def own(cl):
+        attr, spec = cl["attr"], cat.attrs[cl["attr"]]
+        raw = str(cl.get("unresolved") or cl.get("shortcut") or "")
+        value = cl.get("value")
+        values = value if isinstance(value, list) else [value]
+        kind, _, key = macro_key(raw).partition(":") if is_macro(raw) else ("", "", "")
+        if attr == "condition":
+            if kind == "chapter":
+                return set().union(*(find(fold(t)) for t in
+                                     cat.chapters.get(key, {}).get("terms", [])))
+            return set().union(*(named(x) for x in values if isinstance(x, str)))
+        if attr == "region":
+            if kind == "area":
+                return set().union(*(find(fold(t), False) for t in
+                                     cat.areas.get(key, {}).get("terms", [])))
+            if kind == "near":
+                place = key.rsplit(":", 1)[0].replace("_", " ")
+                return find(place, False) | within(m.span() for m in _KM.finditer(folded))
+            return set().union(*(region(x) for x in values if isinstance(x, str)))
+        if spec.kind == "date":
+            dates = []
+            for x in values:
+                try:
+                    dates.append(date.fromisoformat(x))
+                except (TypeError, ValueError):
+                    pass
+            years = {str(d.year) for d in dates} or set(_YEAR.findall(folded))
+            months = {d.month for d in dates}
+            out = set().union(*(find(y, False) for y in years))
+            out |= set().union(*(find(w, False) for m in months for w in _MONTHS[m]))
+            if kind == "event":
+                out |= set().union(*(find(w, False) for w in _SEASONS))
+            return out | within(_relative_spans(folded))
+        if attr in ("sex", "smoking"):
+            return within([span for val, span in _value_mentions(folded, attr, cat)
+                           if val in values])
+        if spec.kind in ("int", "float"):
+            hit = numbers(values, 0 if attr == "triage" else 1 if spec.kind == "int" else 1e-6)
+            if attr == "triage":
+                hit |= set().union(*(find(w, False) for w, c in TRIAGE_COLOURS.items()
+                                     if c in values))
+            return hit | words(attr) if hit else set()
+        return set()
+
+    out = []
+    for cl in resolved:
+        idx = set()
+        if isinstance(cl, dict) and cl.get("attr") in cat.attrs:
+            idx = own(cl) or words(cl["attr"]) or words(cl["attr"], strong=False)
+        runs = []
+        for i in sorted(idx):
+            if runs and i == runs[-1][-1] + 1:
+                runs[-1].append(i)
+            else:
+                runs.append([i])
+        out.append([{"start": toks[r[0]][2], "end": toks[r[-1]][3],
+                     "text": request[toks[r[0]][2]:toks[r[-1]][3]]} for r in runs])
+    return out
+
+
 def coverage(request: str, filt: list, cat: Catalog) -> list[Issue]:
     strong, weak = mentions(request, cat)
     used = {cl.get("attr") for cl in filt if isinstance(cl, dict)}
@@ -241,7 +363,8 @@ def coverage(request: str, filt: list, cat: Catalog) -> list[Issue]:
         if not alts & used:
             labels = " or ".join(cat.attrs[a].label for a in sorted(alts))
             issues.append(Issue("coverage", WARNING,
-                                f"The request mentions {labels}, but no clause filters on it."))
+                                f"The request mentions {labels}, but no clause filters on it.",
+                                attr="condition" if "condition" in alts else sorted(alts)[0]))
     mentioned = set().union(weak, *strong)
     for i, cl in enumerate(filt):
         attr = cl.get("attr") if isinstance(cl, dict) else None
@@ -386,7 +509,9 @@ def provenance(request: str, resolved: list, cat: Catalog, today: date) -> list[
                     d = date.fromisoformat(x)
                 except (TypeError, ValueError):
                     continue
-                if not _date_sourced(d, *srcs):
+                # "in 2024" sources 1 January as a range bound, not as the only day.
+                day = (set(), set(), *srcs[2:]) if cl.get("op") in ("eq", "ne") else srcs
+                if not _date_sourced(d, *day):
                     loose.append(str(d))
                 continue
             if not isinstance(x, (int, float)) or isinstance(x, bool):
@@ -427,6 +552,101 @@ def conjunction(request: str, resolved: list, cat: Catalog) -> list[Issue]:
             issues.append(Issue("conjunction", WARNING,
                                 "The request joins these conditions with 'or', but the clause "
                                 "requires all of them at once.", i))
+    required = [i for i, cl in enumerate(resolved)
+                if isinstance(cl, dict) and cl.get("attr") == "condition"
+                and "shortcut" not in cl and cl.get("op") in ("has", "has_all")]
+    if len(required) > 1 and has_or and not has_and:
+        issues += [Issue("conjunction", WARNING,
+                         "The request joins these conditions with 'or', but separate clauses "
+                         "require every one of them. One 'has any of' clause accepts either.", i)
+                   for i in required[1:]]
+    return issues
+
+
+def _value_mentions(folded: str, attr: str, cat: Catalog) -> list:
+    """Enum values the request names -> [(value, span)], longest phrase first, so that
+    "ex fumatori" reads as former and not also as current."""
+    table = cat._alias.get(attr, {})
+    phrases = sorted(((k.replace("_", " "), v) for k, v in table.items() if len(k) > 1),
+                     key=lambda p: -len(p[0]))
+    found, taken = [], []
+    for phrase, value in phrases:
+        for m in re.finditer(rf"\b{re.escape(phrase)}\b", folded):
+            a, b = m.span()
+            if not any(a < y and x < b for x, y in taken):
+                taken.append((a, b))
+                found.append((value, (a, b)))
+    return found
+
+
+def value_reading(request: str, resolved: list, cat: Catalog) -> list[Issue]:
+    """A sex or smoking status the request names, answered with another one."""
+    folded = fold(request)
+    issues = []
+    for i, cl in enumerate(resolved):
+        if not isinstance(cl, dict) or cl.get("attr") not in ("sex", "smoking"):
+            continue
+        if cl.get("op") not in ("eq", "in"):
+            continue
+        value = cl.get("value")
+        chosen = set(value) if isinstance(value, list) else {value}
+        named = {v for v, _ in _value_mentions(folded, cl["attr"], cat)}
+        extra = chosen - named
+        if not named or not extra:
+            continue
+        label = cat.attrs[cl["attr"]].label
+        if chosen & named:
+            msg = (f"The request names {label} {' or '.join(sorted(named))}; the clause also "
+                   f"accepts {', '.join(map(str, sorted(extra)))}.")
+        else:
+            msg = (f"The request reads as {label} {' or '.join(sorted(named))}, but the clause "
+                   f"selects {', '.join(map(str, sorted(chosen)))}.")
+        issues.append(Issue("value", WARNING, msg, i))
+    return issues
+
+
+def _range(spec, op, v):
+    step = 1 if spec.kind in ("int", "date") else 1e-9
+    num = (lambda x: date.fromisoformat(x).toordinal()) if spec.kind == "date" else float
+    try:
+        if op == "between":
+            return num(v[0]), num(v[1])
+        x = num(v)
+    except (TypeError, ValueError, IndexError, KeyError):
+        return None
+    return {"eq": (x, x), "ge": (x, None), "gt": (x + step, None), "le": (None, x),
+            "lt": (None, x - step)}.get(op)
+
+
+def contradiction(resolved: list, cat: Catalog) -> list[Issue]:
+    """Clauses on one attribute that no patient can satisfy together."""
+    ranges, sets, issues = {}, {}, []
+    for i, cl in enumerate(resolved):
+        if not isinstance(cl, dict) or "unresolved" in cl:
+            continue
+        spec = cat.attrs.get(cl.get("attr"))
+        if spec is None:
+            continue
+        op, v = cl.get("op"), cl.get("value")
+        if spec.kind in ("int", "float", "date"):
+            r = _range(spec, op, v)
+            if r is None:
+                continue
+            lo, hi = ranges.get(spec.key, (None, None))
+            lo = r[0] if lo is None else lo if r[0] is None else max(lo, r[0])
+            hi = r[1] if hi is None else hi if r[1] is None else min(hi, r[1])
+            ranges[spec.key] = (lo, hi)
+            empty = lo is not None and hi is not None and lo > hi
+        elif spec.kind == "enum" and op in ("eq", "in"):
+            vals = set(v) if isinstance(v, list) else {v}
+            sets[spec.key] = sets.get(spec.key, vals) & vals
+            empty = not sets[spec.key]
+        else:
+            continue
+        if empty:
+            issues.append(Issue("contradiction", ERROR,
+                                f"This clause and an earlier one on {spec.label} cannot both "
+                                f"hold: the filter would select no one.", i))
     return issues
 
 
@@ -459,12 +679,13 @@ class Report:
     issues: list
     sql: str
     runnable: bool
+    evidence: list = field(default_factory=list)
     where: str = ""
     params: list = field(default_factory=list)
 
     def as_dict(self) -> dict:
         return {"filter": self.filter, "readable": self.readable,
-                "explanation": self.explanation,
+                "explanation": self.explanation, "evidence": self.evidence,
                 "issues": [x.as_dict() for x in self.issues], "sql": self.sql,
                 "runnable": self.runnable}
 
@@ -484,10 +705,15 @@ def review(request: str, raw_filter, cat: Catalog | None = None,
     issues += [Issue("unresolved", ERROR, reason, i) for i, reason in unresolved]
     issues += validate(resolved, cat)
     issues += coverage(request, filt, cat)
-    issues += near_sets(request, resolved, cat)
-    issues += conjunction(request, resolved, cat)
-    issues += provenance(request, resolved, cat, today)
-    issues += city_scope(request, resolved, cat)
+    # A clause that already blocks is not read further: its value may have any shape.
+    broken = {x.clause for x in issues if x.level == ERROR}
+    clean = [None if i in broken else cl for i, cl in enumerate(resolved)]
+    issues += contradiction(clean, cat)
+    issues += near_sets(request, clean, cat)
+    issues += conjunction(request, clean, cat)
+    issues += value_reading(request, clean, cat)
+    issues += provenance(request, clean, cat, today)
+    issues += city_scope(request, clean, cat)
 
     toks = tokens(request)
     glossary = [f"'{w}' = triage {v} (colour code)" for w, v in TRIAGE_COLOURS.items()
@@ -501,4 +727,5 @@ def review(request: str, raw_filter, cat: Catalog | None = None,
     return Report(filter=filt, resolved=resolved,
                   readable=[render(c, cat) for c in resolved],
                   explanation=trace + readings + glossary, issues=issues, sql=sql,
-                  runnable=runnable, where=where, params=params)
+                  runnable=runnable, evidence=evidence(request, resolved, cat),
+                  where=where, params=params)

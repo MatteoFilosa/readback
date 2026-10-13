@@ -141,3 +141,81 @@ def test_numbers_that_belong_to_other_attributes_are_not_ages(check):
         filt = [clause] + ([{"attr": "sex", "op": "eq", "value": "male"}]
                            if text.startswith("Uomini") else [])
         assert check(text, filt).issues == [], text
+
+
+@pytest.mark.parametrize("item", GOLD, ids=lambda g: g["id"])
+@pytest.mark.parametrize("lang", LANGS)
+def test_every_gold_clause_rests_on_request_words(check, item, lang):
+    report = check(item[lang], item["filter"])
+    assert all(report.evidence)
+
+
+def test_evidence_spans_point_into_the_request(check):
+    request = "Fumatori lombardi con BPCO, sopra i 65 anni, ricoverati a marzo 2024"
+    r = check(request, [{"attr": "smoking", "op": "eq", "value": "current"},
+                        {"attr": "condition", "op": "has", "value": "copd"},
+                        {"attr": "age", "op": "gt", "value": 65},
+                        {"attr": "admission_date", "op": "between",
+                         "value": ["2024-03-01", "2024-03-31"]},
+                        {"attr": "sex", "op": "eq", "value": "male"}])
+    texts = [[e["text"] for e in ev] for ev in r.evidence]
+    assert texts == [["Fumatori"], ["BPCO"], ["sopra i 65 anni"], ["marzo 2024"], []]
+    assert all(request[e["start"]:e["end"]] == e["text"] for ev in r.evidence for e in ev)
+
+
+@pytest.mark.parametrize("clause", [
+    {"attr": "condition", "op": "has_any", "value": [["asthma"]]},
+    {"attr": "region", "op": "in", "value": [["lazio"], "umbria"]},
+    {"attr": "age", "op": "between", "value": {"from": 40}},
+    {"attr": "age", "op": "gt", "value": None},
+    {"attr": "triage", "op": "in", "value": [{"code": 1}]},
+])
+def test_malformed_clauses_are_reported_not_raised(check, clause):
+    r = check("diabetics in Lazio aged 40 with asthma, red code", [clause])
+    assert "validate" in checks_of(r, "error")
+    assert not r.runnable
+
+
+def test_clauses_that_cannot_both_hold_block(check):
+    r = check("Patients living in Lombardy admitted in 2024",
+              [{"attr": "region", "op": "eq", "value": "lombardia"},
+               {"attr": "admission_date", "op": "eq", "value": "2024-01-01"},
+               {"attr": "admission_date", "op": "eq", "value": "2024-12-31"}])
+    assert checks_of(r, "error") == ["contradiction"]
+    assert not r.runnable
+    r = check("women", [{"attr": "sex", "op": "eq", "value": "female"},
+                        {"attr": "sex", "op": "in", "value": ["male"]}])
+    assert "contradiction" in checks_of(r, "error")
+
+
+def test_a_year_does_not_source_a_single_day(check):
+    r = check("Pazienti residenti in Lombardia ricoverati nel 2024",
+              [{"attr": "region", "op": "eq", "value": "lombardia"},
+               {"attr": "admission_date", "op": "eq", "value": "2024-01-01"}])
+    assert checks_of(r) == ["provenance"]
+
+
+def test_or_split_into_separate_clauses(check):
+    r = check("Patients with Crohn's disease or ulcerative colitis",
+              [{"attr": "condition", "op": "has", "value": "crohns_disease"},
+               {"attr": "condition", "op": "has", "value": "ulcerative_colitis"}])
+    assert [(i.check, i.clause) for i in r.issues] == [("conjunction", 1)]
+
+
+@pytest.mark.parametrize("request_text, value, flagged", [
+    ("Ex fumatori con tumore del polmone", "current", True),
+    ("Ex fumatori con tumore del polmone", "former", False),
+    ("Fumatori con BPCO", "current", False),
+    ("Non fumatori con asma", "current", True),
+    ("Never smokers with asthma", "never", False),
+])
+def test_named_smoking_status(check, request_text, value, flagged):
+    r = check(request_text, [{"attr": "smoking", "op": "eq", "value": value}])
+    assert ("value" in checks_of(r)) is flagged
+
+
+def test_extra_smoking_status_is_named(check):
+    r = check("Fumatori con BPCO o asma",
+              [{"attr": "smoking", "op": "in", "value": ["current", "former"]},
+               {"attr": "condition", "op": "has_any", "value": ["copd", "asthma"]}])
+    assert [(i.check, i.clause) for i in r.issues] == [("value", 0)]

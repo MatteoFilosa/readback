@@ -153,10 +153,10 @@ class Catalog:
         return {}
 
     def label(self, attr: str, value) -> str:
-        if attr == "condition" and value in self.conditions:
+        if attr == "condition" and isinstance(value, str) and value in self.conditions:
             c = self.conditions[value]
             return f"{c['name']} ({c['icd10']})"
-        if attr == "region" and value in self.regions:
+        if attr == "region" and isinstance(value, str) and value in self.regions:
             return self.regions[value]["name"]
         return str(value)
 

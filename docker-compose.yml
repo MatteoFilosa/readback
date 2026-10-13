@@ -8,6 +8,7 @@ services:
       LLM_MODEL: ${LLM_MODEL:-}
       LLM_API_KEY: ${LLM_API_KEY:-EMPTY}
       LLM_JSON: ${LLM_JSON:-1}
+      LLM_REASONING: ${LLM_REASONING:-}
       LLM_HARDWARE: ${LLM_HARDWARE:-}
       COHORT_ROWS: ${COHORT_ROWS:-200000}
     extra_hosts:
