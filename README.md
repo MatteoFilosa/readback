@@ -1,8 +1,11 @@
-# Cohort Scout
+# ReadBack
 
 Clinicians describe the patients they need in plain language, in any language. An open model on
 AMD GPUs fills in the search criteria, deterministic checks mark every criterion that does not
 add up, and nothing runs until the clinician has read them and pressed Run.
+
+The name comes from read-back, the safety practice for verbal orders in hospitals: the receiver
+repeats the order and the sender confirms it before anyone acts.
 
 Built for the AMD Developer Hackathon: ACT III, track 2 (Health and Wellbeing).
 
@@ -78,7 +81,7 @@ minute, a daily spend cap; `GET /v1/usage` shows what is left). Run the evaluati
 With Docker:
 
 ```bash
-docker compose up --build
+docker compose --env-file .env.local up --build
 ```
 
 On an AMD GPU machine, model server included: see [deploy/amd](deploy/amd/README.md).

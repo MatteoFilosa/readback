@@ -28,7 +28,7 @@ async def lifespan(app):
     yield
 
 
-app = FastAPI(title="Cohort Scout", lifespan=lifespan)
+app = FastAPI(title="ReadBack", lifespan=lifespan)
 
 
 class DraftIn(BaseModel):

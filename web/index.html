@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Cohort Scout</title>
+  <title>ReadBack</title>
   <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
@@ -11,54 +11,68 @@
     <div class="brand">
       <span class="logo" aria-hidden="true"></span>
       <div>
-        <h1>Cohort Scout</h1>
-        <p>Find patients by describing them. Every clause is checked before anything runs.</p>
+        <div class="title-row">
+          <h1>ReadBack</h1>
+          <button type="button" class="about-btn" id="about-open" aria-haspopup="dialog"
+            title="What ReadBack is for">i</button>
+        </div>
+        <p>Helps doctors and hospital teams find the patients they need by describing them in
+          their own words. Every filter the model sets is read back and checked, and nothing runs
+          until a clinician presses Run.</p>
       </div>
     </div>
     <div class="status" id="status"><span class="dot"></span><span>connecting</span></div>
   </header>
 
   <main>
+    <aside class="card panel-card" id="panel-card">
+      <div class="card-head">
+        <h2>Filters</h2>
+        <button type="button" class="small" id="clear">Clear all</button>
+      </div>
+      <p class="hint">Set them by hand, or describe the patients and let the model set them.
+        All must hold; whatever stays Any is not filtered.</p>
+      <div id="panel"></div>
+    </aside>
+
     <section class="col">
       <div class="card">
-        <label class="label" for="request">Request</label>
-        <textarea id="request" rows="3" placeholder="Describe the patients you are looking for, in any language"></textarea>
+        <div class="request-head">
+          <label class="label" for="request">Describe the patients</label>
+          <span class="hint">Examples in</span>
+          <span class="langs" id="langs"></span>
+        </div>
+        <textarea id="request" rows="3" placeholder="In any language, for example: women over 65 with diabetes and hypertension in the North-West"></textarea>
+        <div class="progress" id="progress" hidden><span></span></div>
         <div class="examples" id="examples"></div>
         <div class="actions">
-          <button class="primary" id="draft">Draft filter</button>
-          <button id="empty">Write it by hand</button>
+          <button type="button" class="primary" id="draft">Set the filters</button>
           <span class="hint" id="draft-info"></span>
         </div>
+        <div id="note" class="note" hidden></div>
       </div>
 
-      <div class="card" id="filter-card" hidden>
-        <div class="card-head">
-          <h2>Criteria</h2>
-          <span class="hint">All must hold. Whatever the request does not mention stays Any.</span>
-        </div>
-        <div id="note" class="note" hidden></div>
-        <div class="explain" id="explain-box" hidden>
-          <h3>How the request was read</h3>
-          <p class="echo" id="echo"></p>
-          <ul class="reading" id="reading"></ul>
-          <ul class="expansions" id="explain"></ul>
-        </div>
+      <div class="card" id="read-card" hidden>
+        <h3>How the request was read</h3>
+        <p class="echo" id="echo"></p>
+        <ul class="reading" id="reading"></ul>
         <div id="general-issues"></div>
-        <div id="clauses"></div>
-
-        <details class="sql" id="sql-box" hidden>
-          <summary>SQL</summary>
-          <pre id="sql"></pre>
+        <ul class="expansions" id="explain"></ul>
+        <h3>SQL <span class="aside">compiled by the app from the filters, never written by the model</span></h3>
+        <pre id="sql"></pre>
+        <details class="help">
+          <summary>What the checks look for</summary>
+          <ul class="checks" id="checks-list"></ul>
+          <p class="hint">All checks are plain code: no second model judges the first. Red blocks Run.
+            Amber and blue are read, then fixed or accepted. Filters you set by hand are not
+            compared with the request.</p>
         </details>
-
         <div class="run-row">
-          <button class="primary big" id="run" disabled>Run</button>
+          <button type="button" class="primary big" id="run" disabled>Run</button>
           <span class="hint" id="run-hint"></span>
         </div>
       </div>
-    </section>
 
-    <section class="col">
       <div class="card" id="result-card" hidden>
         <div class="count-row">
           <div>
@@ -67,7 +81,7 @@
           </div>
           <span class="badge" id="edited" hidden>edited before running</span>
         </div>
-        <h3>How each clause narrows the cohort</h3>
+        <h3>How each filter narrows the cohort</h3>
         <div class="funnel" id="funnel"></div>
         <div class="grid2">
           <div><h3>Age</h3><div class="bars" id="ages"></div></div>
@@ -82,10 +96,10 @@
       <div class="card empty-state" id="placeholder">
         <h2>How it works</h2>
         <ol>
-          <li>Write what you need, for example <em>women over 65 with diabetes and hypertension</em>.</li>
-          <li>An open model on AMD GPUs reads it and fills in the criteria.</li>
-          <li>Deterministic checks mark what does not add up: values that do not exist, parts of the request the filter dropped or added, near-complete groups, numbers nobody wrote, "and" read as "or".</li>
-          <li>You fix or accept each criterion. Nothing runs until you press <strong>Run</strong>.</li>
+          <li>Describe the patients, for example <em>women over 65 with diabetes and hypertension</em>.</li>
+          <li>An open model on AMD GPUs reads the request and sets the filters on the left. The ones it moved are outlined.</li>
+          <li>Each filter shows the words of the request it comes from. Deterministic checks mark what does not add up: values that do not exist, parts of the request the filters dropped or added, near-complete groups, numbers nobody wrote, "and" read as "or".</li>
+          <li>Fix or accept each filter, by hand or with a new request. Nothing runs until you press <strong>Run</strong>.</li>
         </ol>
         <p class="hint">All patients here are synthetic.</p>
       </div>
@@ -93,6 +107,113 @@
       <div class="foot hint" id="stats"></div>
     </section>
   </main>
+
+  <dialog class="about" id="about" aria-labelledby="about-title">
+    <div class="about-head">
+      <h2 id="about-title">Why ReadBack</h2>
+      <button type="button" class="icon" id="about-close" aria-label="Close">✕</button>
+    </div>
+    <p class="lead">In a hospital, a verbal order is read back before anyone acts on it: the
+      receiver repeats it, the sender confirms. ReadBack applies the same rule to the questions
+      clinicians ask of patient data.</p>
+
+    <h3>The problem</h3>
+    <p>Finding a cohort, say <em>women over 65 with diabetes in the North-West, admitted last
+      year</em>, means waiting for an analyst or working through a filter panel with dozens of
+      attributes and hundreds of codes. A language model writes the query in seconds, but it can be
+      wrong in ways that look right: "and" read as "or", a threshold nobody asked for, a disease
+      quietly dropped. For a study, an audit or a recall, a wrong list that looks right is worse
+      than no list.</p>
+
+    <h3>What is different</h3>
+    <ul>
+      <li><strong>It targets the error that matters.</strong> Text-to-query tools report how often
+        the model is right. ReadBack targets the <em>residual</em>: wrong filters that reach the
+        clinician with nothing on screen saying so. A wrong filter that is marked costs a second
+        look; an unmarked one ends up in the study.</li>
+      <li><strong>The model proposes, code verifies.</strong> The model only fills the filter panel.
+        It never writes SQL and never sees a patient record. Nine deterministic checks compare the
+        request, the filters and the catalog; no second model judges the first, and all nine take
+        about a millisecond.</li>
+      <li><strong>The explanation is not generated.</strong> Every filter shows the words
+        it comes from and spells out its groups ("Sud = these 6 regions", "1 of 4 endocrine
+        conditions"), built from the panel and the catalog, so the explanation itself cannot
+        hallucinate.</li>
+      <li><strong>The panel stays in charge.</strong> Clinicians keep the tool they know: the model
+        fills it, they correct it with a click or a new sentence.</li>
+    </ul>
+
+    <h3>The residual, measured</h3>
+    <p>23 requests, each written in English and in Italian, drafted by six open models on AMD GPUs
+      (AMD Token Factory), 46 drafts per model.</p>
+    <div class="rchart" id="residual-chart" role="img"
+      aria-label="Exact, wrong but marked, and wrong unmarked drafts out of 46 for six models; no model has an unmarked wrong draft"></div>
+    <p>Accuracy follows the model, from 25 to 45 of 46. The residual does not: 0 of 46 for every
+      model, with a 95% upper bound of 7.7%. A smaller model leaves more to read, not more to
+      miss. These requests are the ones the checks were built on, including three gaps the 2B
+      model exposed; a held-out set is the next step.</p>
+
+    <h3>How it works</h3>
+    <ol>
+      <li><strong>Ask in your own words</strong>, in any language.</li>
+      <li><strong>The model sets the filters</strong> on the panel; the ones it moved are outlined.</li>
+      <li><strong>Every filter is read back</strong> with the words it comes from, highlighted in
+        the request, and the checks mark what does not add up.</li>
+      <li><strong>Fix or accept</strong> each filter. The SQL is compiled by the app and shown.</li>
+      <li><strong>Press Run.</strong> The result shows how each filter narrows the cohort, so one
+        that removes no one, or everyone, stands out.</li>
+    </ol>
+
+    <h3>Reading the screen</h3>
+    <ul class="legend">
+      <li><span class="swatch moved"></span>Outlined in magenta: set by the model in the last draft.</li>
+      <li><span class="fstate ok">From the request</span> rests on words of the request.</li>
+      <li><span class="fstate assumed">Assumed</span> a value nobody wrote, such as 65 for "elderly". Confirm or edit.</li>
+      <li><span class="fstate check">Check</span> a warning to read, such as "and" read as "any of".</li>
+      <li><span class="fstate fix">Fix before Run</span> an error that blocks the query.</li>
+      <li><span class="fstate hand">Set by hand</span> your own choice, not compared with the request.</li>
+    </ul>
+
+    <div class="two">
+      <div>
+        <h3>For clinicians</h3>
+        <ul>
+          <li>A cohort from a sentence, without learning the panel or opening a ticket with the
+            data team.</li>
+          <li>The model's guesses in plain sight: a threshold for "elderly", a period for "last
+            summer", a whole region for a city.</li>
+          <li>Any language: the request can be Italian or French, the filters and the checks are
+            the same.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>For hospitals</h3>
+        <ul>
+          <li>Records stay inside: the model sees the request and the catalog, and the same open
+            weights fit a single AMD Instinct MI300X on site.</li>
+          <li>Every draft and every run is logged, including whether the clinician changed the
+            filters before running.</li>
+          <li>Codes and places live in plain catalog files: another coding system or country means
+            replacing them, not the code.</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Answering the Health and Wellbeing brief</h3>
+    <ul class="brief">
+      <li><strong>Uncertainty is visible.</strong> Every value nobody wrote is marked Assumed, every
+        doubtful reading is marked Check, on the filter it concerns.</li>
+      <li><strong>It knows when a human is needed.</strong> Errors block Run, and nothing runs until
+        a clinician presses it.</li>
+      <li><strong>No autonomous decisions.</strong> It selects patients from criteria a person has
+        accepted. It does not diagnose, rank or recommend.</li>
+      <li><strong>Sensitive data handled with care.</strong> No patient record reaches the model;
+        weights can run on the hospital's own AMD hardware; every patient in this demo is
+        synthetic.</li>
+      <li><strong>Measurable improvement.</strong> The residual is a number, recomputed offline on
+        recorded drafts whenever a check changes, at no inference cost.</li>
+    </ul>
+  </dialog>
 
   <datalist id="dl-condition"></datalist>
   <datalist id="dl-region"></datalist>

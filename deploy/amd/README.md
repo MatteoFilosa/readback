@@ -11,7 +11,7 @@ image works too). Add your SSH key, then:
 ```bash
 ssh root@<droplet-ip>
 rocm-smi                      # the GPU should be listed
-git clone <repo-url> cohort-scout && cd cohort-scout
+git clone <repo-url> readback && cd readback
 cp .env.example .env
 ```
 
