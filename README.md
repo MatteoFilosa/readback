@@ -61,6 +61,48 @@ A hospital would serve the same open weights itself. `docker-compose.amd.yml` ru
 AMD Instinct GPU next to the app; a single MI300X (192 GB) holds a 70B-class model in bf16.
 That setup is written but has not been run on the hardware yet.
 
+## Safety
+
+ReadBack does not diagnose, rank, recommend or treat. It turns a request into criteria, shows
+how it read them, and selects the patients who meet the criteria a person accepted. What is
+done with those patients remains a clinical decision.
+
+**Incorrect or unsupported responses.** The model only proposes a JSON filter. The SQL is
+compiled by the code, with parameters, on a read-only connection. A value the catalog does not
+have, a period or distance the data cannot define, criteria no patient can meet together and an
+empty filter are errors, and errors block Run. Values are deliberately not constrained at
+decoding time: an invented value stays visible to the checks instead of being replaced in
+silence by the nearest valid one. A part of the request with no criterion, or a criterion
+nobody asked for, is flagged by coverage. When the model fails, times out or answers something
+unreadable, the form says why and the criteria can be set by hand.
+
+**Sensitive information.** The model receives the request and the catalog, never a patient
+record; the query runs on the app's own database. Every patient in this repository and in the
+demo is synthetic, which is the only reason Token Factory is used: its terms rule out health
+data. With real records the same open weights would run on the hospital's own AMD Instinct GPU
+(`docker-compose.amd.yml`), so requests and results would stay inside the hospital. The event
+log keeps requests, filters and counts, not patient rows.
+
+**Uncertain results.** Uncertainty is shown on the criterion it concerns, not as a global
+score. Each criterion carries a state: from the request, assumed, check, fix before Run, or
+mentioned but not filtered. Numbers, dates and places nobody wrote are marked as assumptions
+("elderly" read as 65 or older, "the summer heatwave" as June to August, Milan as all of
+Lombardy). Each criterion shows the words of
+the request it rests on, group shortcuts show their expansion, and after Run the attrition chart
+shows how many patients each criterion removes, so a criterion that removes no one, or
+everyone, stands out. A replayed draft, used when no live draft is available, is labelled.
+
+**High-risk decisions.** The only action ReadBack takes is running a read-only query, and it
+cannot start while an error stands: the server refuses a blocked filter (HTTP 422) whatever the
+interface sends. The output is a count, the cohort's distribution by sex, age, condition and
+region, and a sample of matching admissions, for a person to act on.
+
+**Human review.** Nothing runs until a clinician presses Run. Every criterion can be edited and
+every edit reruns the checks. The log records whether the filter changed between draft and Run,
+and `/api/stats` reports how many drafts were flagged and how many runs were edited: a measure
+of how often a person had to step in. The checks are plain code, so a reviewer can read exactly
+what each one tests, and their misses are counted offline (see Evaluation).
+
 ## Run it
 
 Local development, with any OpenAI-compatible endpoint. The defaults in `.env.example` point
