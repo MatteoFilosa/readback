@@ -1,0 +1,400 @@
+[
+ {
+  "request": "Patients aged 40 to 60 with diabetes",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "age",
+    "op": "between",
+    "value": [
+     40,
+     60
+    ]
+   },
+   {
+    "attr": "condition",
+    "op": "has",
+    "value": "diabetes"
+   }
+  ],
+  "note": ""
+ },
+ {
+  "request": "Patients with diabetes and hypertension living in the North-West",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "condition",
+    "op": "has",
+    "value": "diabetes"
+   },
+   {
+    "attr": "condition",
+    "op": "has",
+    "value": "hypertension"
+   },
+   {
+    "attr": "region",
+    "op": "in",
+    "value": "area:nord_ovest"
+   }
+  ],
+  "note": ""
+ },
+ {
+  "request": "Very sick elderly patients",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "triage",
+    "op": "le",
+    "value": 2
+   },
+   {
+    "attr": "age",
+    "op": "ge",
+    "value": 65
+   }
+  ],
+  "note": "Interpreted 'very sick' as triage level 1 or 2 (most urgent) and 'elderly' as age 65 or older."
+ },
+ {
+  "request": "Patients admitted during the 2023 summer heatwave",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "admission_date",
+    "op": "between",
+    "value": [
+     "2023-06-01",
+     "2023-08-31"
+    ]
+   }
+  ],
+  "note": "The request refers to the 2023 summer heatwave, which is interpreted as the summer months of June, July, and August 2023."
+ },
+ {
+  "request": "Red-code patients with a fever above 39 degrees",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "triage",
+    "op": "eq",
+    "value": 1
+   },
+   {
+    "attr": "temperature",
+    "op": "gt",
+    "value": 39
+   }
+  ],
+  "note": ""
+ },
+ {
+  "request": "Asthma patients within 30 km of Milan",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "condition",
+    "op": "has",
+    "value": "asthma"
+   }
+  ],
+  "note": "The request mentions 'within 30 km of Milan', but the data does not include geographic coordinates or distance information; only region of residence is available. Therefore, the distance filter cannot be applied."
+ },
+ {
+  "request": "Patients with long COVID",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [],
+  "note": "The request mentions 'long COVID', which is not a condition listed in the available attributes. No filter can be constructed for this condition."
+ },
+ {
+  "request": "Patients over 70 with a cardiovascular disease",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "age",
+    "op": "gt",
+    "value": 70
+   },
+   {
+    "attr": "condition",
+    "op": "has_any",
+    "value": "chapter:circulatory"
+   }
+  ],
+  "note": ""
+ },
+ {
+  "request": "Pazienti tra 40 e 60 anni con diabete",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "age",
+    "op": "between",
+    "value": [
+     40,
+     60
+    ]
+   },
+   {
+    "attr": "condition",
+    "op": "has",
+    "value": "diabetes"
+   }
+  ],
+  "note": ""
+ },
+ {
+  "request": "Pazienti con diabete e ipertensione residenti nel Nord-Ovest",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "condition",
+    "op": "has",
+    "value": "diabetes"
+   },
+   {
+    "attr": "condition",
+    "op": "has",
+    "value": "hypertension"
+   },
+   {
+    "attr": "region",
+    "op": "in",
+    "value": "area:nord_ovest"
+   }
+  ],
+  "note": ""
+ },
+ {
+  "request": "Pazienti anziani molto gravi",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "age",
+    "op": "ge",
+    "value": 65
+   },
+   {
+    "attr": "triage",
+    "op": "le",
+    "value": 2
+   }
+  ],
+  "note": "Interpreted 'anziani' as age >= 65 and 'molto gravi' as triage 1 or 2 (most urgent)."
+ },
+ {
+  "request": "Pazienti ricoverati durante l'ondata di caldo dell'estate 2023",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [],
+  "note": "The request refers to a specific event (the summer 2023 heatwave) that cannot be defined with the available date range or attributes. No filter can be applied."
+ },
+ {
+  "request": "Pazienti in codice rosso con febbre sopra i 39 gradi",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "triage",
+    "op": "eq",
+    "value": 1
+   },
+   {
+    "attr": "temperature",
+    "op": "gt",
+    "value": 39.0
+   }
+  ],
+  "note": ""
+ },
+ {
+  "request": "Pazienti asmatici entro 30 km da Milano",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "condition",
+    "op": "has",
+    "value": "asthma"
+   },
+   {
+    "attr": "region",
+    "op": "eq",
+    "value": "near(Milano, 30)"
+   }
+  ],
+  "note": "The request specifies a distance from a place, which is not directly supported; using near(Milano, 30) as region value. No region attribute in the data can represent distance, so this filter may not be applicable."
+ },
+ {
+  "request": "Pazienti con long COVID",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [],
+  "note": "The request mentions 'long COVID', which is not a condition listed in the available attributes. No filter can be applied."
+ },
+ {
+  "request": "Pazienti con più di 70 anni con una malattia cardiovascolare",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "age",
+    "op": "gt",
+    "value": 70
+   },
+   {
+    "attr": "condition",
+    "op": "has_any",
+    "value": "chapter:circulatory"
+   }
+  ],
+  "note": ""
+ },
+ {
+  "request": "Patients de 40 à 60 ans atteints de diabète",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "age",
+    "op": "between",
+    "value": [
+     40,
+     60
+    ]
+   },
+   {
+    "attr": "condition",
+    "op": "has",
+    "value": "diabetes"
+   }
+  ],
+  "note": ""
+ },
+ {
+  "request": "Patients diabétiques et hypertendus résidant dans le Nord-Ouest",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "condition",
+    "op": "has",
+    "value": "diabetes"
+   },
+   {
+    "attr": "condition",
+    "op": "has",
+    "value": "hypertension"
+   },
+   {
+    "attr": "region",
+    "op": "in",
+    "value": "area:nord_ovest"
+   }
+  ],
+  "note": ""
+ },
+ {
+  "request": "Patients âgés très malades",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "triage",
+    "op": "le",
+    "value": 2
+   }
+  ],
+  "note": "The request 'very sick' is interpreted as high urgency (triage 1 or 2). No age or other specific condition specified."
+ },
+ {
+  "request": "Patients hospitalisés pendant la canicule de l'été 2023",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "admission_date",
+    "op": "between",
+    "value": [
+     "2023-06-01",
+     "2023-08-31"
+    ]
+   }
+  ],
+  "note": "The request refers to the summer 2023 heatwave, approximated as June 1 to August 31, 2023."
+ },
+ {
+  "request": "Patients en code rouge avec une fièvre supérieure à 39 degrés",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "triage",
+    "op": "eq",
+    "value": 1
+   },
+   {
+    "attr": "temperature",
+    "op": "gt",
+    "value": 39.0
+   }
+  ],
+  "note": ""
+ },
+ {
+  "request": "Patients asthmatiques à moins de 30 km de Milan",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "condition",
+    "op": "has",
+    "value": "asthma"
+   },
+   {
+    "attr": "region",
+    "op": "eq",
+    "value": "near(Milan, 30)"
+   }
+  ],
+  "note": "The request specifies distance from Milan, which is not a listed region; using near(Milan, 30) as region value."
+ },
+ {
+  "request": "Patients atteints de COVID long",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [],
+  "note": "The request mentions 'COVID long' (long COVID), which is not a condition listed in the available attributes. No filter can be applied."
+ },
+ {
+  "request": "Patients de plus de 70 ans avec une maladie cardiovasculaire",
+  "model": "DeepSeek-V4-Flash",
+  "date": "2026-10-17",
+  "filter": [
+   {
+    "attr": "age",
+    "op": "gt",
+    "value": 70
+   },
+   {
+    "attr": "condition",
+    "op": "has_any",
+    "value": "chapter:circulatory"
+   }
+  ],
+  "note": ""
+ }
+]

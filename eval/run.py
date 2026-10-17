@@ -2,6 +2,7 @@
 
   python -m eval.run draft --out results/run.jsonl      # calls the model, one line per request
   python -m eval.run score results/run.jsonl            # recomputes scores and checks offline
+  python -m eval.run examples --env-file .env.local     # drafts the UI replays if the model is down
 
 Scoring compares clause sets after both sides are normalised and resolved, so "age > 65" and
 "age >= 66", or a group shortcut and its expanded list, count as the same filter.
@@ -10,9 +11,11 @@ import argparse
 import json
 import math
 import os
+import re
 import sys
 import time
 from datetime import date, timedelta
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -25,6 +28,7 @@ from cohort.resolve import NEAR, resolve
 from .gold import GOLD, LANGS
 
 TODAY = date(2026, 10, 12)
+ROOT = Path(__file__).resolve().parent.parent
 
 
 def _bounds(spec, op, v):
@@ -128,6 +132,37 @@ def draft_run(out_path, langs, rpm):
                       + (f"  ERROR {out['error']}" if out["error"] else ""))
 
 
+def ui_examples() -> list[str]:
+    src = (ROOT / "web" / "app.js").read_text("utf-8")
+    start = src.index("const EXAMPLES")
+    block = src[start:src.index("};", start)]
+    return [json.loads(f'"{m}"') for m in re.findall(r'^\s+"(.+)",\s*$', block, re.M)]
+
+
+def examples_run(out_path, rpm):
+    cat = get_catalog()
+    os.environ.setdefault("LLM_MAX_WAIT", "90")
+    old = {}
+    if os.path.exists(out_path):
+        old = {r["request"]: r for r in json.load(open(out_path, encoding="utf-8"))}
+    rows, gap, last = [], 60 / rpm if rpm else 0, 0.0
+    for request in ui_examples():
+        time.sleep(max(0.0, last + gap - time.monotonic()))
+        last = time.monotonic()
+        out = llm.draft(request, cat)
+        if out["error"]:
+            print(f"ERROR {request}: {out['error']}")
+            if request in old:
+                rows.append(old[request])
+            continue
+        rows.append({"request": request, "model": out["model"], "date": date.today().isoformat(),
+                     "filter": out["filter"], "note": out["note"]})
+        print(f"{out['ms']:>6} ms  {request}")
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(rows, f, ensure_ascii=False, indent=1)
+        f.write("\n")
+
+
 def score_run(path):
     cat = get_catalog()
     gold = {g["id"]: g for g in GOLD}
@@ -180,10 +215,16 @@ def main(argv=None):
     d.add_argument("--rpm", type=float, default=15)
     s = sub.add_parser("score")
     s.add_argument("path")
+    e = sub.add_parser("examples")
+    e.add_argument("--out", default=str(ROOT / "cohort" / "saved_drafts.json"))
+    e.add_argument("--env-file", help="KEY=VALUE file, e.g. .env.local")
+    e.add_argument("--rpm", type=float, default=15)
     args = ap.parse_args(argv)
-    if args.cmd == "draft":
-        if args.env_file:
-            load_dotenv(args.env_file, override=True)
+    if getattr(args, "env_file", None):
+        load_dotenv(args.env_file, override=True)
+    if args.cmd == "examples":
+        examples_run(args.out, args.rpm)
+    elif args.cmd == "draft":
         if args.model:
             os.environ["LLM_MODEL"] = args.model
         if args.reasoning is not None:

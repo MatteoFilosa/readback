@@ -165,3 +165,32 @@ def test_api_round_trip(client, fake_model):
 def test_api_refuses_to_run_a_blocked_filter(client):
     r = client.post("/api/run", json={"request": "long covid", "filter": []})
     assert r.status_code == 422
+
+
+def test_saved_draft_is_replayed_only_when_the_model_is_down(client, monkeypatch):
+    from cohort import api
+    monkeypatch.setenv("LLM_BASE_URL", "http://127.0.0.1:9/v1")
+    monkeypatch.setenv("LLM_MODEL", "x")
+    monkeypatch.setenv("LLM_TIMEOUT", "2")
+    saved = {"request": "Patients with long COVID", "model": "m", "date": "2026-10-17",
+             "filter": [{"attr": "condition", "op": "has", "value": "long_covid"}], "note": ""}
+    monkeypatch.setitem(api.state, "saved", {api._key(saved["request"]): saved})
+    d = client.post("/api/draft", json={"request": "patients  with long covid "}).json()
+    assert d["saved"]["model"] == "m" and "unreachable" in d["saved"]["reason"]
+    assert d["llm"]["error"] is None and d["filter"] == saved["filter"]
+    assert any(i["level"] == "error" for i in d["issues"])
+    other = client.post("/api/draft", json={"request": "diabetici over 65"}).json()
+    assert other["saved"] is None and other["filter"] == []
+    assert client.get("/api/stats").json()["drafts"] == 0
+
+
+def test_draft_limit_per_visitor(client, fake_model, monkeypatch):
+    from cohort import api
+    monkeypatch.setattr(api, "DRAFT_LIMIT", 2)
+    monkeypatch.setattr(api, "recent", {})
+    ask = lambda ip: client.post("/api/draft", json={"request": "diabetici over 65"},
+                                 headers={"X-Forwarded-For": ip}).json()
+    assert ask("1.1.1.1")["llm"]["error"] is None
+    assert ask("1.1.1.1")["llm"]["error"] is None
+    assert "limit" in ask("1.1.1.1")["llm"]["error"]
+    assert ask("2.2.2.2")["llm"]["error"] is None

@@ -705,9 +705,11 @@ async function draft() {
     state.closed = untouchedGroups();
     $("note").hidden = !out.note;
     $("note").textContent = out.note ? `Model note: ${out.note}` : "";
-    $("draft-info").textContent = out.llm.error
-      ? `${out.llm.error}. You can still set the filters by hand.`
-      : `Drafted by ${out.llm.model} in ${(out.llm.ms / 1000).toFixed(1)} s. Nothing runs until you press Run.`;
+    $("draft-info").textContent = out.saved
+      ? `No live draft right now (${out.saved.reason}). This is the draft ${out.saved.model} wrote for this example on ${out.saved.date}; the checks ran just now. Nothing runs until you press Run.`
+      : out.llm.error
+        ? `${out.llm.error}. You can still set the filters by hand.`
+        : `Drafted by ${out.llm.model} in ${(out.llm.ms / 1000).toFixed(1)} s. Nothing runs until you press Run.`;
     renderPanel();
     showReport(out);
     const first = document.querySelector("#panel .facet.moved");
