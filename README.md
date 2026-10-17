@@ -9,6 +9,9 @@ repeats the order and the sender confirms it before anyone acts.
 
 Built for the AMD Developer Hackathon: ACT III, track 2 (Health and Wellbeing).
 
+**Live demo: https://readback-sooty.vercel.app** (synthetic patients only). Vercel hosts the web
+app and the checks; every draft comes from the model on AMD GPUs through AMD Token Factory.
+
 ## The problem
 
 Finding a cohort ("diabetic women over 65 in the North-West, admitted last year") means
@@ -85,6 +88,12 @@ docker compose --env-file .env.local up --build
 ```
 
 On an AMD GPU machine, model server included: see [deploy/amd](deploy/amd/README.md).
+
+The public demo runs on Vercel from `main` (`app.py` is the entrypoint, the database is rebuilt
+in `/tmp` on each cold start). `DRAFT_LIMIT` caps drafts per visitor per hour to protect the
+shared key. When no live draft is available, the example requests replay the draft the model
+wrote for them earlier (`cohort/saved_drafts.json`, `python -m eval.run examples`), labelled as
+such; the checks always run live.
 
 ## Evaluation
 
